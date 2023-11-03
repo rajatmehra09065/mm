@@ -6,11 +6,15 @@ import 'package:get/get_navigation/src/routes/transitions_type.dart';
 
 import '../consts/consts.dart';
 import '../views/redeemed_screen/redeemed_screen.dart';
+import 'internet_connecton_snakeBar.dart';
+final ConnectivityController connectivityController = Get.find();
 
 Widget openButton({
   required Map<String, dynamic>? doneCheckCodeDataMap,
   required List<dynamic>? doneListCodeDataMap,
+  required List<dynamic>? doneListCodeIdDataMap,
   required int index,
+
 }){
   return ElevatedButton(
       style: ElevatedButton.styleFrom(
@@ -19,17 +23,18 @@ Widget openButton({
           backgroundColor: Colors.white,
           padding: EdgeInsets.all(12)
       ),
-      onPressed: () async{
+      onPressed: !connectivityController.isConnected.value ? null : () async{
 
         Get.to(
             RedeemScreen(
               doneCheckCodeDataMap: doneCheckCodeDataMap,
               doneListCodeDataMap: doneListCodeDataMap,
+              doneListCodeIdDataMap: doneListCodeIdDataMap,
                 selectedIndex: index
 
             ), //next page class
             duration: Duration(milliseconds: 1100 ), //duration of transitions, default 1 sec
-            transition: Transition.fadeIn); //transition effect
+            transition: Transition.rightToLeft); //transition effect
 
       }, child: open.text.fontFamily(semibold).black.make());
 }

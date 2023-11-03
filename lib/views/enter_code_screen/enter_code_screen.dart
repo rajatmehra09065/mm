@@ -2,7 +2,10 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' as getX;
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/src/routes/transitions_type.dart';
+import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 
 import 'package:mm/consts/consts.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +15,8 @@ import 'package:mm/views/open_card_screen/open_card_screen.dart';
 import '../../consts/images.dart';
 import '../../consts/strings.dart';
 import '../../repository/check_code_repository.dart';
+import '../../widget_common/internet_connecton_snakeBar.dart';
+import '../user_details/user_details_screen2.dart';
 
 
 class EnterCodeScreen extends StatefulWidget {
@@ -23,11 +28,30 @@ class EnterCodeScreen extends StatefulWidget {
 
 class _EnterCodeScreenState extends State<EnterCodeScreen> {
 
+  //snakeBar internetConnection
+  final SnackbarController snackbarController = Get.put(SnackbarController());
+  final ConnectivityController connectivityController = Get.find();
+
   TextEditingController enterCodeController  = TextEditingController();
 
   CheckCodeRepository checkCodeRepository = CheckCodeRepository();
   String errorMsg="";
   bool isLoading = false;
+
+
+  //internet connection error sankebar
+  @override
+  void initState() {
+    super.initState();
+
+    connectivityController.isConnected.listen((isConnected) {
+      if (!isConnected) {
+        snackbarController.showSnackbar('No Internet Connection');
+      } else {
+        snackbarController.hideSnackbar();
+      }
+    });
+  }
 
 
 
@@ -45,10 +69,10 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Expanded(
+          child: SingleChildScrollView(
             child: Column(
               children: [
-                SizedBox(height: height * 0.15,),
+
                 //app logo
                 Image.asset(appLogo, width: 100,),
 
@@ -87,7 +111,7 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
                         backgroundColor: pinkishOrange,
                         padding: EdgeInsets.all(12)
                     ),
-                    onPressed:isLoading ? null : () async{
+                    onPressed:isLoading || !connectivityController.isConnected.value ? null : () async{
                       setState(() {
                         isLoading = true;
                         errorMsg="";
@@ -97,7 +121,7 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
                         await checkCodeRepository.hitCheckCodeApi(enterCodeController.text.toString());
 
 
-                        if(checkCodeRepository.doneCheckCodeDataMap!['code'] ==402){
+                        if(checkCodeRepository.doneCheckCodeDataMap!['code'] ==404){
 
                           setState(() {
                             errorMsg="Invalid Code";
@@ -109,12 +133,26 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
                           });
                         }
 
-                        else if(checkCodeRepository.doneCheckCodeDataMap!['code'] ==500){
+                        else if(checkCodeRepository.doneCheckCodeDataMap!['code'] ==405){
                           setState(() {
-                            errorMsg="Code Is Already Opened";
+                            errorMsg="Code Already Redeemed";
                           });
                         }
 
+                        else if(checkCodeRepository.doneCheckCodeDataMap!['code'] ==403){
+
+                          Get.to(
+                            UserDetailScreen2(
+
+                                doneListCodeDataMap: checkCodeRepository.doneListCodeDataMap,
+                                doneListCodeIdDataMap : checkCodeRepository.doneListCodeIdDataMap
+                            ), //next page class
+                            duration: Duration(milliseconds: 1100 ), //duration of transitions, default 1 sec
+                            transition: Transition.rightToLeft,
+                          );
+
+
+                        }
 
                         else if(checkCodeRepository.doneCheckCodeDataMap!['code'] ==200){
 
@@ -123,9 +161,10 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
                               OpenCardScreen(
                                 doneCheckCodeDataMap: checkCodeRepository.doneCheckCodeDataMap,
                                 doneListCodeDataMap: checkCodeRepository.doneListCodeDataMap,
+                                  doneListCodeIdDataMap : checkCodeRepository.doneListCodeIdDataMap
                               ), //next page class
                               duration: Duration(milliseconds: 1100 ), //duration of transitions, default 1 sec
-                              transition: Transition.fadeIn,
+                              transition: Transition.rightToLeft,
                           );
                         }
 
@@ -156,6 +195,11 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
           ),
         ),
       ),
+
+      bottomNavigationBar: Obx(() {
+        final snackbar = snackbarController.snackbar.value;
+        return snackbar != null ? snackbar : SizedBox.shrink();
+      }),
     );
   }
 }

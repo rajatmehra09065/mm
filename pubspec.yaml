@@ -42,6 +42,9 @@ dependencies:
   fluttertoast: ^8.2.2
   another_flushbar: ^1.12.30
   provider: ^6.0.5
+  connectivity: ^3.0.6
+  image_picker: ^1.0.4
+  modal_progress_hud_nsn: ^0.4.0
 
 
 dev_dependencies:

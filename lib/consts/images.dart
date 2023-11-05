@@ -1,5 +1,6 @@
 const appLogo = "assets/icons/appLogo.png";
 const uploadImg = "assets/icons/uploadImg.png";
+const greyBg = "assets/icons/recgrey.png";
 const card1 = "assets/icons/card1.png";
 const card2 = "assets/icons/card2.png";
 const card3 = "assets/icons/card3.png";

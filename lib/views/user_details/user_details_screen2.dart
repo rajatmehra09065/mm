@@ -1,9 +1,15 @@
+
+import 'dart:convert';
+import 'dart:io' as io;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mm/consts/consts.dart';
 import 'package:mm/widget_common/custom_text_field.dart';
-
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
 import '../../consts/strings.dart';
 import '../../repository/check_code_repository.dart';
 import '../enter_code_screen/enter_code_screen.dart';
@@ -25,6 +31,10 @@ class UserDetailScreen2 extends StatefulWidget {
 class _UserDetailsState extends State<UserDetailScreen2> {
   bool isLoading = false;
   String submitMsg = '';
+  //for img select
+  io.File? image;
+  final _picker = ImagePicker();
+  bool showSpinner = false;
 
   // Instance
   UserDetailsRepository userDetailsRepository = UserDetailsRepository();
@@ -42,7 +52,8 @@ class _UserDetailsState extends State<UserDetailScreen2> {
       barrierDismissible: false, // The user must tap a button to dismiss the dialog
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.white, // Change the background color
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),// Change the background color
           title: Text(
             'Success',
             style: TextStyle(color: Colors.black), // Change the text color
@@ -77,6 +88,94 @@ class _UserDetailsState extends State<UserDetailScreen2> {
     );
   }
 
+  Future getImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery , imageQuality: 80);
+    if(pickedFile != null){
+      image = io.File(pickedFile.path);
+      setState(() {
+
+      });
+    }
+    else{
+      print("no image selected");
+    }
+  }
+
+  //upload img method
+  Future<void> uploadImageAndSubmit() async {
+
+    Map<String , dynamic>? userDetailsDataMap;
+    Map<String , dynamic>? doneUserDetailsDataMap;
+    List<dynamic>? doneListUserDetailsDataMap;
+
+    if (image != null) {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://employeyarena.com/makhoyamoolah/api/user-data'), // Replace with your image upload URL
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image', // Replace with your server's field name for the image
+          image!.path,
+        ),
+      );
+
+      request.fields['user_name'] = fullNameController.text;
+      request.fields['user_mobile'] = mobileNumberController.text;
+      request.fields['user_address'] = addressController.text;
+      request.fields['user_pin_code'] = pinCodeController.text;
+      request.fields['price_name'] = widget.doneListCodeDataMap![0]['name'];
+      request.fields['price_description'] = widget.doneListCodeDataMap![0]['discription'];
+      request.fields['price_code'] = widget.doneListCodeIdDataMap![0]['code'];
+
+      try {
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+
+        if(response.statusCode==200){
+          userDetailsDataMap = jsonDecode(response.body);
+
+
+          doneUserDetailsDataMap = userDetailsDataMap!['meta_data'];
+
+          //all the data like prize name and img
+          doneListUserDetailsDataMap = doneUserDetailsDataMap!['data'];
+
+
+        }
+
+
+        if (doneUserDetailsDataMap!['code'] == 401) {
+          // Show the success dialog
+          _showSuccessDialog(context);
+        } else if (doneUserDetailsDataMap!['code'] == 400) {
+          setState(() {
+            submitMsg = "Please Enter The Details";
+            isLoading = false;
+
+          });
+        }
+
+      } catch (e) {
+        // Handle network or request error
+        print('Image upload error: $e');
+      }
+      finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+    else {
+      // If no image is selected, show an error message and set isLoading to false
+      setState(() {
+        submitMsg = "Please Upload The Receipt";
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width * 1;
@@ -106,11 +205,51 @@ class _UserDetailsState extends State<UserDetailScreen2> {
 
                   SizedBox(height: height * 0.040,),
                   // Price img
-                  Image.network(widget.doneListCodeDataMap![0]['picture'], width: 180, height: 180),
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children:[
+                    Image.network(widget.doneListCodeDataMap![0]['picture'], width: 180, height: 180),
+                        SizedBox(width: width * 0.040,),
+                        // upload img conatiner
+                        GestureDetector(
+                          onTap: () {
+                            getImage(); // Call getImage method when the container is tapped.
+                          },
+                          child: image == null
+                              ? Container(
+                            height: 100,
+                            width: 100,
+                            decoration: BoxDecoration(
+                                color: CupertinoColors.systemGrey6,
+                                borderRadius: BorderRadius.circular(10)
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(height: height * 0.010,),
+                                Image.asset(uploadImg, width: 50, height: 50),
+                                SizedBox(height: height * 0.005,),
+                                Text("Add Receipt",style: TextStyle(color: fontGrey), )
+                              ],
+                            ),
+                          )
+                              : Container(
+                            child: Image.file(
+                              io.File(image!.path).absolute,
+                              height: 50,
+                              width: 50,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        )
+
+
+                  ]),
 
                   SizedBox(height: height * 0.010,),
                   // Price name
-                  Text(widget.doneListCodeDataMap![0]['name']).text.fontFamily(bold).size(20).make(),
+                  Center(child: Text(widget.doneListCodeDataMap![0]['name']).text.fontFamily(bold).size(20).make()),
 
                   SizedBox(height: height * 0.050,),
                   customTextField(hint: fullName, controller: fullNameController),
@@ -141,43 +280,8 @@ class _UserDetailsState extends State<UserDetailScreen2> {
                         submitMsg = '';
                       });
 
-                      try {
-                        await userDetailsRepository.hitUserDetailsApi(
-                          fullName: fullNameController.text.toString(),
-                          mobileNumber: mobileNumberController.text.toString(),
-                          address: addressController.text.toString(),
-                          pinCode: pinCodeController.text.toString(),
-                          priceName: widget.doneListCodeDataMap![0]['name'],
-                          priceDescription: widget.doneListCodeDataMap![0]['discription'],
-                          priceCode: widget.doneListCodeIdDataMap![0]['code'],
-                        );
-                        if (userDetailsRepository.doneUserDetailsDataMap!['code'] == 401) {
-                          setState(() {
-                            submitMsg = "";
-                          });
+                      uploadImageAndSubmit();
 
-
-                          // Show the success dialog
-                          _showSuccessDialog(context);
-
-
-                        }
-
-                        // Blank details
-                        else if(userDetailsRepository.doneUserDetailsDataMap!['code'] == 400){
-                          setState(() {
-                            submitMsg = "Please Enter The Details";
-                            isLoading = false;
-                          });
-                        }
-
-                      } catch (e) {
-                        print("error=$e");
-                      } finally {
-                        setState(() {
-                          isLoading = false;
-                        });
-                      }
                     },
                     child: submit.text.white.fontFamily(bold).size(16).make(),
                   ).box.width(context.screenWidth).height(55).make(),

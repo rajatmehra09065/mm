@@ -3,7 +3,6 @@
 
 
 import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -61,6 +60,7 @@ class _UserDetailsState extends State<UserDetails> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           title: Text('Success',style: TextStyle(color: Colors.black),),
           content: SingleChildScrollView(
             child: ListBody(
@@ -149,9 +149,9 @@ class _UserDetailsState extends State<UserDetails> {
           if (doneUserDetailsDataMap!['code'] == 401) {
             // Show the success dialog
             _showSuccessDialog(context);
-          } else if (doneUserDetailsDataMap!['code'] == 400) {
+          } else if (doneUserDetailsDataMap['code'] == 400) {
             setState(() {
-              submitMsg = "Please Enter The Details Or Upload The Image";
+              submitMsg = "Please Enter The Details";
               isLoading = false;
 
             });
@@ -166,6 +166,14 @@ class _UserDetailsState extends State<UserDetails> {
           isLoading = false;
         });
       }
+
+    }
+    else {
+      // If no image is selected, show an error message and set isLoading to false
+      setState(() {
+        submitMsg = "Please Upload The Receipt";
+        isLoading = false;
+      });
     }
   }
 
@@ -203,8 +211,11 @@ class _UserDetailsState extends State<UserDetails> {
                   SizedBox(height: height * 0.040,),
                   // Price img + upload imng
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [ Image.network(widget.doneListCodeDataMap![widget.selectedIndex]['picture'], width: 180, height: 180),
-                        
+                         SizedBox(width: width * 0.040,),
+
                          // upload img conatiner
                         GestureDetector(
                           onTap: () {
@@ -212,7 +223,21 @@ class _UserDetailsState extends State<UserDetails> {
                           },
                           child: image == null
                               ? Container(
-                            child: Image.asset(uploadImg, width: 50, height: 50),
+                            height: 100,
+                            width: 100,
+                            decoration: BoxDecoration(
+                                color: CupertinoColors.systemGrey6,
+                              borderRadius: BorderRadius.circular(10)
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(height: height * 0.010,),
+                                Image.asset(uploadImg, width: 50, height: 50),
+                                SizedBox(height: height * 0.005,),
+                                Text("Add Receipt",style: TextStyle(color: fontGrey), )
+                              ],
+                            ),
                           )
                               : Container(
                             child: Image.file(
@@ -230,7 +255,7 @@ class _UserDetailsState extends State<UserDetails> {
 
                   SizedBox(height: height * 0.010,),
                   // Price name
-                  Text(widget.doneListCodeDataMap![widget.selectedIndex]['name']).text.fontFamily(bold).size(20).make(),
+                  Center(child: Text(widget.doneListCodeDataMap![widget.selectedIndex]['name']).text.fontFamily(bold).size(20).make()),
 
                   SizedBox(height: height * 0.050,),
                   customTextField(hint: fullName, controller: fullNameController),
